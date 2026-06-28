@@ -428,28 +428,135 @@ export const dimensions = {
 
 ---
 
-## 部署与常见问题
+## 踩坑记录
 
-### 构建缓存问题
+### 🕳️ Vercel 部署 500 — proxy 缺少环境变量
 
-每次更新后需要清除缓存：
+**问题**：部署到 Vercel 后全站 500 错误。
+
+**原因**：Next.js 16 的 `proxy.ts` 在每个请求都会执行，而它内部调用了 Supabase 的 `createServerClient`。如果 `NEXT_PUBLIC_SUPABASE_URL` 或 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 未在 Vercel 环境变量中设置，`process.env.xxx!` 会得到 `undefined`，导致 proxy 崩溃，所有页面无法加载。
+
+**解决**：在 proxy 入口处提前检查环境变量，缺失时跳过 Supabase 会话刷新：
+
+```ts
+export async function proxy(request: NextRequest) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next()
+  }
+  return await updateSession(request)
+}
+```
+
+同时在 Vercel 项目 → Settings → Environment Variables 添加对应变量。
+
+### 🕳️ 构建缓存冲突
+
+**问题**：更新代码后本地启动报 "Cannot find module" 错误。
+
+**原因**：Next.js 的 `.next` 缓存了旧的编译产物，版本升级或文件变动后缓存未失效。
+
+**解决**：
 
 ```bash
 rm -rf .next && npm run dev
 ```
 
-### Supabase 权限
+建议在 `package.json` 中添加快捷命令：
 
-评论写入需要启用 `INSERT` 策略（允许匿名写入），views 表同理。
+```json
+"dev:clean": "rm -rf .next && next dev"
+```
 
-### Three.js 运行时错误
+### 🕳️ Three.js 服务端渲染报错
 
-Three.js 必须用 `dynamic(() => import(...), { ssr: false })` 引入，否则服务端渲染会报 `window is not defined`。
+**问题**：Three.js 组件在构建时报 `window is not defined`。
 
-### Next.js 16 变更
+**原因**：Three.js 依赖浏览器 API（`window`、`document`），无法在 Node.js 服务端渲染。
 
-- `middleware.ts` → `src/proxy.ts`
-- `@supabase/ssr` v0.12 `setAll` 签名变更（多了第二个参数 `headers`）
+**解决**：用 `next/dynamic` 动态导入并关闭 SSR：
+
+```tsx
+const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), {
+  ssr: false,
+})
+```
+
+### 🕳️ @supabase/ssr v0.12 setAll 签名变更
+
+**问题**：`@supabase/ssr` 升级到 v0.12 后 `setAll` 方法报类型错误。
+
+**原因**：v0.12 新增了第二个参数 `headers`，旧的签名 `(cookiesToSet) => void` 不再匹配。
+
+**解决**：更新为 `setAll(cookiesToSet, headers) => { ... }`，并在函数体内处理 headers：
+
+```ts
+setAll(cookiesToSet, headers) {
+  cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+  if (headers) {
+    Object.entries(headers).forEach(([key, value]) =>
+      supabaseResponse.headers.set(key, value)
+    )
+  }
+}
+```
+
+### 🕳️ Next.js 16 middleware → proxy 迁移
+
+**问题**：Next.js 16 启动报错，找不到 `middleware.ts`。
+
+**原因**：Next.js 16 弃用了 `middleware.ts`，改为 `src/proxy.ts`。
+
+**解决**：将 `middleware.ts` 重命名为 `src/proxy.ts`，导出签名不变：
+
+```ts
+// src/proxy.ts — Next.js 16 替代 middleware.ts
+export async function proxy(request: NextRequest) {
+  return await updateSession(request)
+}
+```
+
+### 🕳️ Supabase 权限 — 匿名写入被拒
+
+**问题**：评论发表或阅读计数增加时报 401 / 403。
+
+**原因**：Supabase 默认所有表只允许认证用户操作，匿名写入需要显式开启 Row Level Security (RLS) 策略。
+
+**解决**：在 Supabase Dashboard → SQL Editor 中执行：
+
+```sql
+-- 允许匿名用户插入评论
+create policy "允许匿名插入评论"
+on comments for insert
+to anon
+with check (true);
+
+-- 允许匿名用户读取评论
+create policy "允许匿名读取评论"
+on comments for select
+to anon
+using (true);
+```
+
+views 表同理。
+
+### 🕳️ Git push 超时 / 认证失败
+
+**问题**：`git push` 一直卡住或提示认证失败。
+
+**原因**：未配置 GitHub 凭据，终端等待交互式输入用户名密码（而 GitHub 已不支持密码认证）。
+
+**解决**：安装 GitHub CLI 并登录：
+
+```bash
+brew install gh && gh auth login
+git push
+```
+
+或使用 Personal Access Token：
+
+```bash
+git remote set-url origin https://<username>:<token>@github.com/xxx/xxx.git
+```
 
 ---
 
