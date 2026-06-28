@@ -1,6 +1,6 @@
 # Mystic Blog
 
-A personal blog built with **Next.js 16**, **Supabase**, **Three.js**, and **Tailwind CSS**.
+A personal blog built with **Next.js 16**, **Supabase**, **Three.js**, and **Tailwind CSS**.  
 
 ## Features
 
