@@ -558,6 +558,45 @@ git push
 git remote set-url origin https://<username>:<token>@github.com/xxx/xxx.git
 ```
 
+### 🕳️ Git push 被拒 — 远程有本地没有的提交
+
+**问题**：`git push` 报错 `Updates were rejected because the remote contains work that you do not have locally`。
+
+**原因**：远程仓库包含本地没有的 commits（例如 Vercel 或其他人先推送了代码），Git 拒绝直接覆盖。
+
+**解决**：先拉取合并，再推送：
+
+```bash
+git pull --rebase origin main
+git push
+```
+
+也可以用 `git push --force` 强制覆盖，但会丢失远程的提交，慎用。
+
+### 🕳️ Vercel 推送后未自动部署
+
+**问题**：代码推送到 GitHub 后，Vercel 没有触发自动部署。
+
+**原因**：Vercel 项目可能是在 Dashboard 手动导入的，默认不连接 Git 仓库自动部署；或 GitHub App 未正确安装。
+
+**解决**：手动触发部署：
+
+```
+Vercel Dashboard → 选择项目 → Deployments → Trigger Deployment → 选择 main 分支
+```
+
+或确保 Vercel 项目 Settings → Git 中已关联正确仓库，并开启 Auto-Deploy。
+
+### 🕳️ Vercel CLI 无法交互式登录
+
+**问题**：运行 `npx vercel --prod` 超时卡住。
+
+**原因**：Vercel CLI 首次运行需要交互式登录（浏览器打开授权页面），在终端非交互模式下无法完成。
+
+**解决**：两种方式之一：
+- 在本地安装并登录：`npm i -g vercel && vercel login`
+- 在 Vercel Dashboard 操作（推荐）：直接网页端手动部署
+
 ---
 
 ## 总结
