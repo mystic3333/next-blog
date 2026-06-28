@@ -1,0 +1,86 @@
+[
+  {
+    "name": "ChatGPT",
+    "description": "OpenAI 的对话式 AI 助手，支持文本生成、代码编写、数据分析等",
+    "url": "https://chat.openai.com",
+    "category": "对话助手",
+    "icon": "🤖"
+  },
+  {
+    "name": "Claude",
+    "description": "Anthropic 推出的 AI 助手，擅长长文本处理、代码分析和深度推理",
+    "url": "https://claude.ai",
+    "category": "对话助手",
+    "icon": "🫐"
+  },
+  {
+    "name": "GitHub Copilot",
+    "description": "AI 代码补全工具，集成在 VS Code 等编辑器中，支持多种编程语言",
+    "url": "https://github.com/features/copilot",
+    "category": "编程工具",
+    "icon": "💻"
+  },
+  {
+    "name": "Cursor",
+    "description": "AI-first 代码编辑器，内置深度 AI 集成，支持多文件上下文编辑",
+    "url": "https://cursor.sh",
+    "category": "编程工具",
+    "icon": "✏️"
+  },
+  {
+    "name": "OpenCode",
+    "description": "终端原生的 AI 编程助手，支持多 agent 协作和自定义技能",
+    "url": "https://opencode.ai",
+    "category": "编程工具",
+    "icon": "⌨️"
+  },
+  {
+    "name": "Perplexity",
+    "description": "AI 搜索引擎，提供带引用的实时信息检索和深度研究",
+    "url": "https://www.perplexity.ai",
+    "category": "搜索研究",
+    "icon": "🔍"
+  },
+  {
+    "name": "Midjourney",
+    "description": "AI 图像生成工具，以高质量艺术风格和精准的提示词理解著称",
+    "url": "https://www.midjourney.com",
+    "category": "图像生成",
+    "icon": "🎨"
+  },
+  {
+    "name": "Flux",
+    "description": "Black Forest Labs 推出的 AI 图像生成模型，支持快速高质量出图",
+    "url": "https://flux.ai",
+    "category": "图像生成",
+    "icon": "🖼️"
+  },
+  {
+    "name": "Notion AI",
+    "description": "集成在 Notion 中的 AI 写作助手，支持文档生成、总结和翻译",
+    "url": "https://www.notion.so/product/ai",
+    "category": "写作工具",
+    "icon": "📝"
+  },
+  {
+    "name": "ElevenLabs",
+    "description": "AI 语音合成工具，支持多语言、多音色的自然语音生成",
+    "url": "https://elevenlabs.io",
+    "category": "音频工具",
+    "icon": "🎙️"
+  },
+  {
+    "name": "Suno",
+    "description": "AI 音乐生成平台，通过文本提示生成完整的歌曲",
+    "url": "https://suno.com",
+    "category": "音频工具",
+    "icon": "🎵"
+  },
+  {
+    "name": "Runway",
+    "description": "AI 视频生成和编辑平台，支持文生视频、图生视频等多种创作方式",
+    "url": "https://runwayml.com",
+    "category": "视频工具",
+    "icon": "🎬"
+  }
+]

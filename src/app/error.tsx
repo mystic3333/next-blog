@@ -1,0 +1,27 @@
+"use client"
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">Something went wrong</h1>
+        <p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>
+          {error.message}
+        </p>
+        <button
+          onClick={reset}
+          className="mt-6 rounded-lg border px-4 py-2 text-sm transition-all hover:opacity-70"
+          style={{ borderColor: "var(--border)" }}
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+  )
+}
