@@ -9,9 +9,16 @@ export default function BlogCard({ post }: { post: PostMeta }) {
       style={{ borderColor: "var(--border)", background: "var(--card)" }}
     >
       <Link href={`/blog/${post.slug}`}>
-        <time className="text-sm" style={{ color: "var(--muted)" }}>
-          {formatDate(post.date)}
-        </time>
+        <div className="flex items-center gap-2">
+          {post.featured && (
+            <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+              置顶
+            </span>
+          )}
+          <time className="text-sm" style={{ color: "var(--muted)" }}>
+            {formatDate(post.date)}
+          </time>
+        </div>
         <h2 className="mt-2 text-xl font-semibold">{post.title}</h2>
         <p className="mt-2 line-clamp-2 text-sm" style={{ color: "var(--muted)" }}>
           {post.description}

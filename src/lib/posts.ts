@@ -10,6 +10,7 @@ export interface PostMeta {
   description: string
   date: string
   tags: string[]
+  featured?: boolean
 }
 
 export interface Post extends PostMeta {
@@ -34,9 +35,14 @@ export function getAllPosts(): PostMeta[] {
         description: data.description || "",
         date: data.date || new Date().toISOString(),
         tags: data.tags || [],
+        featured: data.featured || false,
       }
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+      if (a.featured && !b.featured) return -1
+      if (!a.featured && b.featured) return 1
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
+    })
 
   return posts
 }
@@ -61,6 +67,7 @@ export function getPostBySlug(slug: string): Post | null {
     description: data.description || "",
     date: data.date || new Date().toISOString(),
     tags: data.tags || [],
+    featured: data.featured || false,
     content,
   }
 }

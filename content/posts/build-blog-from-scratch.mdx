@@ -1,0 +1,471 @@
+---
+title: "从零搭建 Next.js 博客全记录"
+description: "从 create-next-app 到完整的多功能博客，涵盖 Next.js 16、Supabase、Three.js、MDX、暗黑模式、AI 工具导航和 SCL-90 心理测试的完整搭建教程。"
+date: "2026-06-29"
+tags: ["nextjs", "supabase", "threejs", "tutorial", "react"]
+featured: true
+---
+
+这是一个从零开始搭建个人博客的完整记录。技术栈：**Next.js 16 + Supabase + Three.js + Tailwind CSS + MDX**。
+
+---
+
+## 目录
+
+1. [项目初始化](#项目初始化)
+2. [基础架构](#基础架构)
+3. [主题系统](#主题系统)
+4. [Supabase 集成](#supabase-集成)
+5. [Three.js 3D 背景](#threejs-3d-背景)
+6. [MDX 博客系统](#mdx-博客系统)
+7. [评论系统](#评论系统)
+8. [阅读统计](#阅读统计)
+9. [AI 工具导航页](#ai-工具导航页)
+10. [SCL-90 心理测试](#scl-90-心理测试)
+11. [部署与常见问题](#部署与常见问题)
+
+---
+
+## 项目初始化
+
+```bash
+npx create-next-app@latest next-blog --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
+```
+
+Next.js 16 + React 19 起步，App Router + Turbopack。
+
+```bash
+npm install -D @types/node
+npm install react-icons
+```
+
+**目录结构**：
+
+```
+next-blog/
+├── src/
+│   ├── app/          # App Router 页面
+│   ├── components/   # 共享组件
+│   ├── lib/          # 工具库
+│   ├── data/         # 静态数据
+│   └── types/        # TypeScript 类型
+├── content/posts/    # MDX 博文
+├── supabase/         # 数据库 Schema
+└── public/           # 静态资源
+```
+
+---
+
+## 基础架构
+
+### 深色 / 浅色主题
+
+使用 CSS 变量 + `next-themes`：
+
+```tsx
+// src/components/ThemeProvider.tsx
+"use client"
+
+import { ThemeProvider as NextThemesProvider } from "next-themes"
+
+export default function ThemeProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+      {children}
+    </NextThemesProvider>
+  )
+}
+```
+
+在 `globals.css` 中定义 CSS 变量，`.light` 和 `.dark` 两套色板。
+
+### Header / Footer
+
+Header 包含 Logo + 导航链接 + 主题切换按钮。Footer 包含版权信息。
+
+### Proxy（Next.js 16）
+
+Next.js 16 弃用 `middleware.ts`，改为 `src/proxy.ts`：
+
+```ts
+// src/proxy.ts
+import type { NextRequest } from "next/server"
+
+export function proxy(request: NextRequest) {
+  // 处理 cookie / session 刷新
+}
+```
+
+---
+
+## Supabase 集成
+
+### 安装依赖
+
+```bash
+npm install @supabase/supabase-js @supabase/ssr
+```
+
+### 客户端封装
+
+三层结构：
+
+- `src/lib/supabase/client.ts` — 浏览器端 Client Component
+- `src/lib/supabase/server.ts` — Server Component / Route Handler
+- `src/lib/supabase/middleware.ts` — Proxy / Middleware 用
+
+`.env.local` 配置：
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
+```
+
+### GitHub OAuth
+
+```tsx
+// src/components/SessionWrapper.tsx
+"use client"
+
+import { createClient } from "@/lib/supabase/client"
+import { useEffect } from "react"
+
+export default function SessionWrapper() {
+  const supabase = createClient()
+
+  const signInWithGithub = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: { redirectTo: `${location.origin}/auth/callback` },
+    })
+  }
+
+  // ...
+}
+```
+
+> ⚠️ 需要在 Supabase Dashboard → Authentication → Providers 中启用 GitHub，并填写 Client ID / Secret。
+
+---
+
+## Three.js 3D 背景
+
+### 安装
+
+```bash
+npm install three @react-three/fiber @react-three/drei
+```
+
+### 粒子系统
+
+```tsx
+// src/components/ThreeBackground.tsx
+"use client"
+
+import { useRef, useMemo } from "react"
+import { Canvas, useFrame } from "@react-three/fiber"
+import type * as THREE from "three"
+
+// 生成 1000 个随机粒子位置
+const positions = new Float32Array(
+  Array.from({ length: 3000 }, () => (Math.random() - 0.5) * 10)
+)
+
+function Particles() {
+  const ref = useRef<THREE.Points>(null!)
+
+  useFrame((_, delta) => {
+    ref.current.rotation.y += delta * 0.02
+  })
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={1000}
+          array={positions}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <pointsMaterial size={0.02} color="#3b82f6" transparent opacity={0.6} />
+    </points>
+  )
+}
+```
+
+### 懒加载封装
+
+Three.js 是客户端重量级依赖，用动态导入 + `next/dynamic` 包装：
+
+```tsx
+// src/components/ThreeBackgroundWrapper.tsx
+"use client"
+
+import dynamic from "next/dynamic"
+
+const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), {
+  ssr: false,
+})
+
+export default function ThreeBackgroundWrapper() {
+  return (
+    <div className="fixed inset-0 -z-10">
+      <ThreeBackground />
+    </div>
+  )
+}
+```
+
+---
+
+## MDX 博客系统
+
+### 安装
+
+```bash
+npm install gray-matter
+npm install @next/mdx @mdx-js/loader @mdx-js/react
+```
+
+### 配置 next.config.mjs
+
+```js
+import createMDX from "@next/mdx"
+
+const withMDX = createMDX()
+
+export default withMDX({
+  pageExtensions: ["ts", "tsx", "mdx"],
+})
+```
+
+### 获取文章列表
+
+```ts
+// src/lib/posts.ts
+import fs from "fs"
+import path from "path"
+import matter from "gray-matter"
+
+export function getAllPosts() {
+  const fileNames = fs.readdirSync(postsDirectory)
+  return fileNames
+    .filter((fn) => fn.endsWith(".mdx"))
+    .map((fileName) => {
+      const source = fs.readFileSync(path.join(postsDirectory, fileName), "utf-8")
+      const { data } = matter(source)
+      return { slug: fileName.replace(/\.mdx$/, ""), ...data }
+    })
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+}
+```
+
+### 文章 Frontmatter 格式
+
+```mdx
+---
+title: "文章标题"
+description: "摘要"
+date: "2026-06-28"
+tags: ["nextjs", "react"]
+featured: true   # 置顶，可选
+---
+```
+
+---
+
+## 评论系统
+
+### Schema
+
+```sql
+create table comments (
+  id bigint generated by default as identity primary key,
+  post_slug text not null,
+  author_name text not null,
+  content text not null,
+  created_at timestamptz default now()
+);
+```
+
+### API Route
+
+```ts
+// src/app/api/comments/route.ts
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const postSlug = searchParams.get("post_slug")
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("post_slug", postSlug)
+    .order("created_at", { ascending: false })
+  return Response.json(data)
+}
+```
+
+### 评论组件
+
+`CommentSection` 组件包含评论区列表 + 表单（名称、内容）。
+
+---
+
+## 阅读统计
+
+### Schema
+
+```sql
+create table views (
+  slug text primary key,
+  count bigint default 1
+);
+
+create or replace function increment_view(slug_param text)
+returns void as $$
+  insert into views (slug, count) values (slug_param, 1)
+  on conflict (slug) do update set count = views.count + 1;
+$$ language sql;
+```
+
+### API Route
+
+```ts
+export async function POST(request: NextRequest) {
+  const { slug } = await request.json()
+  const supabase = await createClient()
+  await supabase.rpc("increment_view", { slug_param: slug })
+  const { data } = await supabase.from("views").select("count").eq("slug", slug).single()
+  return Response.json({ count: data?.count || 0 })
+}
+```
+
+### ViewCounter 组件
+
+每篇文章详情页嵌入，初次渲染时调用 `POST /api/views` 增加计数，再 `GET` 获取当前值。
+
+---
+
+## AI 工具导航页
+
+### 数据
+
+放在 `src/data/ai-tools.json`，JSON 格式：
+
+```json
+[
+  {
+    "name": "ChatGPT",
+    "description": "OpenAI 的对话式 AI",
+    "url": "https://chat.openai.com",
+    "category": "chat",
+    "icon": "🤖"
+  }
+]
+```
+
+### 分类筛选
+
+页面提供分类按钮（全部 / Chat / 编程 / 设计 / 写作 / 搜索），点击筛选。
+
+### 组件
+
+```tsx
+// src/components/ToolCard.tsx
+export default function ToolCard({ tool }: { tool: AITool }) {
+  return (
+    <a href={tool.url} target="_blank" className="rounded-xl border p-4 transition hover:opacity-80">
+      <span className="text-2xl">{tool.icon}</span>
+      <h3 className="mt-2 font-semibold">{tool.name}</h3>
+      <p className="mt-1 text-sm">{tool.description}</p>
+    </a>
+  )
+}
+```
+
+---
+
+## SCL-90 心理测试
+
+### 数据
+
+90 道题，10 个维度（躯体化、强迫、人际敏感等），5 级评分（1-5）：
+
+```ts
+export const scl90Questions = [
+  { id: 1, text: "头痛", dimension: "somatization" },
+  { id: 2, text: "神经过敏，心中不踏实", dimension: "obsessive-compulsive" },
+  // ... 共 90 题
+]
+
+export const dimensions = {
+  somatization: { name: "躯体化", questionIds: [1, 4, 12, ...] },
+  // ...
+}
+```
+
+### UI
+
+单卡片滑动切换（左右按钮或点击选项后自动前进），纯 CSS transition：
+
+```tsx
+<div
+  className="transition-all duration-500 ease-in-out"
+  style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+>
+  {questions.map((q) => (
+    <div key={q.id} className="w-full flex-shrink-0">
+      {/* 题目内容、选项按钮 */}
+    </div>
+  ))}
+</div>
+```
+
+### 结果计算
+
+完成后展示各维度原始分、阳性项目数、阳性症状均分。用 `radar-chart` 可视化。
+
+---
+
+## 部署与常见问题
+
+### 构建缓存问题
+
+每次更新后需要清除缓存：
+
+```bash
+rm -rf .next && npm run dev
+```
+
+### Supabase 权限
+
+评论写入需要启用 `INSERT` 策略（允许匿名写入），views 表同理。
+
+### Three.js 运行时错误
+
+Three.js 必须用 `dynamic(() => import(...), { ssr: false })` 引入，否则服务端渲染会报 `window is not defined`。
+
+### Next.js 16 变更
+
+- `middleware.ts` → `src/proxy.ts`
+- `@supabase/ssr` v0.12 `setAll` 签名变更（多了第二个参数 `headers`）
+
+---
+
+## 总结
+
+这个博客项目涵盖了现代前端开发的主要技术点：
+
+| 技术 | 用途 |
+|------|------|
+| Next.js 16 App Router | 服务端组件、路由 |
+| Supabase | 认证、数据库、API |
+| Three.js + R3F | 3D 粒子背景 |
+| Tailwind CSS | 样式系统 |
+| MDX | 内容管理 |
+| next-themes | 暗黑模式 |
+
+整个项目源代码开放在 GitHub 上，欢迎查看和 Star。
+
+Happy coding! 🚀
