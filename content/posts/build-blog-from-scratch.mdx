@@ -22,7 +22,11 @@ featured: true
 8. [阅读统计](#阅读统计)
 9. [AI 工具导航页](#ai-工具导航页)
 10. [SCL-90 心理测试](#scl-90-心理测试)
-11. [部署与常见问题](#部署与常见问题)
+11. [踩坑记录](#踩坑记录)
+    - [Vercel 部署](#vercel-部署)
+    - [Git 相关](#git-相关)
+    - [Next.js](#nextjs)
+    - [Supabase](#supabase)
 
 ---
 
@@ -430,7 +434,9 @@ export const dimensions = {
 
 ## 踩坑记录
 
-### 🕳️ Vercel 部署 500 — proxy 缺少环境变量
+###  Vercel 部署
+
+#### 🕳️ 部署 500 — proxy 缺少环境变量
 
 **问题**：部署到 Vercel 后全站 500 错误。
 
@@ -449,97 +455,35 @@ export async function proxy(request: NextRequest) {
 
 同时在 Vercel 项目 → Settings → Environment Variables 添加对应变量。
 
-### 🕳️ 构建缓存冲突
+#### 🕳️ 推送后未自动部署
 
-**问题**：更新代码后本地启动报 "Cannot find module" 错误。
+**问题**：代码推送到 GitHub 后，Vercel 没有触发自动部署。
 
-**原因**：Next.js 的 `.next` 缓存了旧的编译产物，版本升级或文件变动后缓存未失效。
+**原因**：Vercel 项目可能是在 Dashboard 手动导入的，默认不连接 Git 仓库自动部署；或 GitHub App 未正确安装。
+
+**解决**：手动触发部署：
+
+```
+Vercel Dashboard → 选择项目 → Deployments → Trigger Deployment → 选择 main 分支
+```
+
+或确保 Vercel 项目 Settings → Git 中已关联正确仓库，并开启 Auto-Deploy。
+
+#### 🕳️ CLI 无法交互式登录
+
+**问题**：运行 `npx vercel --prod` 超时卡住。
+
+**原因**：Vercel CLI 首次运行需要交互式登录（浏览器打开授权页面），在终端非交互模式下无法完成。
 
 **解决**：
+- 在本地安装并登录：`npm i -g vercel && vercel login`
+- 或在 Vercel Dashboard 网页端直接操作（推荐）
 
-```bash
-rm -rf .next && npm run dev
-```
+---
 
-建议在 `package.json` 中添加快捷命令：
+###  Git 相关
 
-```json
-"dev:clean": "rm -rf .next && next dev"
-```
-
-### 🕳️ Three.js 服务端渲染报错
-
-**问题**：Three.js 组件在构建时报 `window is not defined`。
-
-**原因**：Three.js 依赖浏览器 API（`window`、`document`），无法在 Node.js 服务端渲染。
-
-**解决**：用 `next/dynamic` 动态导入并关闭 SSR：
-
-```tsx
-const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), {
-  ssr: false,
-})
-```
-
-### 🕳️ @supabase/ssr v0.12 setAll 签名变更
-
-**问题**：`@supabase/ssr` 升级到 v0.12 后 `setAll` 方法报类型错误。
-
-**原因**：v0.12 新增了第二个参数 `headers`，旧的签名 `(cookiesToSet) => void` 不再匹配。
-
-**解决**：更新为 `setAll(cookiesToSet, headers) => { ... }`，并在函数体内处理 headers：
-
-```ts
-setAll(cookiesToSet, headers) {
-  cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-  if (headers) {
-    Object.entries(headers).forEach(([key, value]) =>
-      supabaseResponse.headers.set(key, value)
-    )
-  }
-}
-```
-
-### 🕳️ Next.js 16 middleware → proxy 迁移
-
-**问题**：Next.js 16 启动报错，找不到 `middleware.ts`。
-
-**原因**：Next.js 16 弃用了 `middleware.ts`，改为 `src/proxy.ts`。
-
-**解决**：将 `middleware.ts` 重命名为 `src/proxy.ts`，导出签名不变：
-
-```ts
-// src/proxy.ts — Next.js 16 替代 middleware.ts
-export async function proxy(request: NextRequest) {
-  return await updateSession(request)
-}
-```
-
-### 🕳️ Supabase 权限 — 匿名写入被拒
-
-**问题**：评论发表或阅读计数增加时报 401 / 403。
-
-**原因**：Supabase 默认所有表只允许认证用户操作，匿名写入需要显式开启 Row Level Security (RLS) 策略。
-
-**解决**：在 Supabase Dashboard → SQL Editor 中执行：
-
-```sql
--- 允许匿名用户插入评论
-create policy "允许匿名插入评论"
-on comments for insert
-to anon
-with check (true);
-
--- 允许匿名用户读取评论
-create policy "允许匿名读取评论"
-on comments for select
-to anon
-using (true);
-```
-
-views 表同理。
-
-### 🕳️ Git push 超时 / 认证失败
+#### 🕳️ push 超时 / 认证失败
 
 **问题**：`git push` 一直卡住或提示认证失败。
 
@@ -558,7 +502,7 @@ git push
 git remote set-url origin https://<username>:<token>@github.com/xxx/xxx.git
 ```
 
-### 🕳️ Git push 被拒 — 远程有本地没有的提交
+#### 🕳️ push 被拒 — 远程有本地没有的提交
 
 **问题**：`git push` 报错 `Updates were rejected because the remote contains work that you do not have locally`。
 
@@ -571,31 +515,101 @@ git pull --rebase origin main
 git push
 ```
 
-也可以用 `git push --force` 强制覆盖，但会丢失远程的提交，慎用。
+---
 
-### 🕳️ Vercel 推送后未自动部署
+###  Next.js
 
-**问题**：代码推送到 GitHub 后，Vercel 没有触发自动部署。
+#### 🕳️ 构建缓存冲突
 
-**原因**：Vercel 项目可能是在 Dashboard 手动导入的，默认不连接 Git 仓库自动部署；或 GitHub App 未正确安装。
+**问题**：更新代码后本地启动报 "Cannot find module" 错误。
 
-**解决**：手动触发部署：
+**原因**：Next.js 的 `.next` 缓存了旧的编译产物，版本升级或文件变动后缓存未失效。
 
+**解决**：
+
+```bash
+rm -rf .next && npm run dev
 ```
-Vercel Dashboard → 选择项目 → Deployments → Trigger Deployment → 选择 main 分支
+
+建议在 `package.json` 中添加快捷命令：
+
+```json
+"dev:clean": "rm -rf .next && next dev"
 ```
 
-或确保 Vercel 项目 Settings → Git 中已关联正确仓库，并开启 Auto-Deploy。
+#### 🕳️ Three.js 服务端渲染报错
 
-### 🕳️ Vercel CLI 无法交互式登录
+**问题**：Three.js 组件在构建时报 `window is not defined`。
 
-**问题**：运行 `npx vercel --prod` 超时卡住。
+**原因**：Three.js 依赖浏览器 API（`window`、`document`），无法在 Node.js 服务端渲染。
 
-**原因**：Vercel CLI 首次运行需要交互式登录（浏览器打开授权页面），在终端非交互模式下无法完成。
+**解决**：用 `next/dynamic` 动态导入并关闭 SSR：
 
-**解决**：两种方式之一：
-- 在本地安装并登录：`npm i -g vercel && vercel login`
-- 在 Vercel Dashboard 操作（推荐）：直接网页端手动部署
+```tsx
+const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), {
+  ssr: false,
+})
+```
+
+#### 🕳️ middleware → proxy 迁移
+
+**问题**：Next.js 16 启动报错，找不到 `middleware.ts`。
+
+**原因**：Next.js 16 弃用了 `middleware.ts`，改为 `src/proxy.ts`。
+
+**解决**：将 `middleware.ts` 重命名为 `src/proxy.ts`，导出签名不变：
+
+```ts
+// src/proxy.ts — Next.js 16 替代 middleware.ts
+export async function proxy(request: NextRequest) {
+  return await updateSession(request)
+}
+```
+
+---
+
+###  Supabase
+
+#### 🕳️ @supabase/ssr v0.12 setAll 签名变更
+
+**问题**：`@supabase/ssr` 升级到 v0.12 后 `setAll` 方法报类型错误。
+
+**原因**：v0.12 新增了第二个参数 `headers`，旧的签名 `(cookiesToSet) => void` 不再匹配。
+
+**解决**：更新为 `setAll(cookiesToSet, headers) => { ... }`，并在函数体内处理 headers：
+
+```ts
+setAll(cookiesToSet, headers) {
+  cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+  if (headers) {
+    Object.entries(headers).forEach(([key, value]) =>
+      supabaseResponse.headers.set(key, value)
+    )
+  }
+}
+```
+
+#### 🕳️ 匿名写入被拒
+
+**问题**：评论发表或阅读计数增加时报 401 / 403。
+
+**原因**：Supabase 默认所有表只允许认证用户操作，匿名写入需要显式开启 Row Level Security (RLS) 策略。
+
+**解决**：在 Supabase Dashboard → SQL Editor 中执行：
+
+```sql
+create policy "允许匿名插入评论"
+on comments for insert
+to anon
+with check (true);
+
+create policy "允许匿名读取评论"
+on comments for select
+to anon
+using (true);
+```
+
+views 表同理。
 
 ---
 
