@@ -37,10 +37,11 @@ export function SupabaseProvider({
 
   const signInWithGithub = async () => {
     setLoading(true)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
     await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${siteUrl}/auth/callback`,
       },
     })
     setLoading(false)

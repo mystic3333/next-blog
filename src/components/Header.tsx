@@ -2,13 +2,10 @@
 
 import Link from "next/link"
 import { useTheme } from "./ThemeProvider"
-import { useSupabase } from "./SupabaseProvider"
-
 const GITHUB_URL = "https://github.com/mystic3333"
 
 export default function Header() {
   const { theme, toggle } = useTheme()
-  const { user, signInWithGithub, signOut, loading } = useSupabase()
 
   return (
     <header className="sticky top-0 z-50 border-b" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
@@ -61,33 +58,7 @@ export default function Header() {
             )}
           </button>
 
-          {user ? (
-            <div className="flex items-center gap-3">
-              {user.user_metadata?.avatar_url && (
-                <img
-                  src={user.user_metadata.avatar_url}
-                  alt=""
-                  className="h-6 w-6 rounded-full"
-                />
-              )}
-              <button
-                onClick={signOut}
-                className="text-sm transition-opacity hover:opacity-70"
-                style={{ color: "var(--muted)" }}
-              >
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={signInWithGithub}
-              disabled={loading}
-              className="rounded-lg border px-3 py-1.5 text-sm transition-all hover:opacity-70 disabled:opacity-50"
-              style={{ borderColor: "var(--border)", color: "var(--foreground)" }}
-            >
-              {loading ? "..." : "Sign In"}
-            </button>
-          )}
+          {/* 登录功能暂未启用 */}
         </div>
       </nav>
     </header>
